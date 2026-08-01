@@ -1,8 +1,9 @@
 import os
+from io import BytesIO
 from pathlib import Path
-from typing import Any
 
 from fastapi import UploadFile
+from PIL import Image, UnidentifiedImageError
 
 
 async def validate_image(file: UploadFile, max_size: int) -> None:
@@ -20,6 +21,12 @@ async def validate_image(file: UploadFile, max_size: int) -> None:
     if len(contents) > max_size:
         raise ValueError(f"Image size exceeds the maximum limit of {max_size // (1024 * 1024)}MB.")
 
+    try:
+        image = Image.open(BytesIO(contents))
+        image.verify()
+    except (UnidentifiedImageError, OSError) as exc:
+        raise ValueError("Corrupt or invalid image file.") from exc
+
     await file.seek(0)
 
 
@@ -27,7 +34,7 @@ async def save_upload(file: UploadFile, upload_dir: str) -> str:
     """Persist an uploaded image to disk and return the saved path."""
     Path(upload_dir).mkdir(parents=True, exist_ok=True)
 
-    file_path = Path(upload_dir) / f"{Path(file.filename or 'upload').stem}_{os.urandom(8).hex()}" 
+    file_path = Path(upload_dir) / f"{Path(file.filename or 'upload').stem}_{os.urandom(8).hex()}"
     if file.filename and Path(file.filename).suffix.lower() in {".jpg", ".jpeg", ".png", ".webp"}:
         file_path = file_path.with_suffix(Path(file.filename).suffix.lower())
 

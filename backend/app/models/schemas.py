@@ -22,7 +22,9 @@ class PredictionResponse(BaseModel):
     cause: str
     description: str
     treatment: list[str]
-    recommended_products: list[str]
+    products: list[str]
+    explanation: str
+    buy_links: list[dict[str, str]]
 
 
 class ErrorResponse(BaseModel):

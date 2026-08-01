@@ -1,8 +1,14 @@
+import logging
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.api.routes import router
+from app.services.inference import crop_disease_model
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("farcrop")
 
 app = FastAPI(
     title="FarCrop Backend",
@@ -11,6 +17,19 @@ app = FastAPI(
 )
 
 app.include_router(router)
+
+
+@app.on_event("startup")
+async def startup_event() -> None:
+    """Load the crop disease model once when the application starts."""
+    logger.info("Loading Crop Disease Model...")
+    try:
+        crop_disease_model.load_model()
+    except Exception as exc:  # pragma: no cover - runtime environment path
+        logger.exception("Model load failed: %s", exc)
+    else:
+        logger.info("Model Loaded Successfully")
+        logger.info("Inference Ready")
 
 
 @app.exception_handler(HTTPException)
