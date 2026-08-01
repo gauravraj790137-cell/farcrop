@@ -9,6 +9,16 @@ class CropDiseaseModel:
     """Load a local Hugging Face image-classification model once and reuse it."""
 
     _instance: "CropDiseaseModel | None" = None
+    _LABEL_NORMALIZATION_MAP = {
+        "Tomato with Early Blight": "Tomato___Early_blight",
+        "Tomato with Late Blight": "Tomato___Late_blight",
+        "Healthy Tomato Plant": "Tomato___healthy",
+        "Potato with Early Blight": "Potato___Early_blight",
+        "Potato with Late Blight": "Potato___Late_blight",
+        "Healthy Potato Plant": "Potato___healthy",
+        "Bell Pepper with Bacterial Spot": "Pepper__bell___Bacterial_spot",
+        "Healthy Bell Pepper Plant": "Pepper__bell___healthy",
+    }
 
     def __new__(cls) -> "CropDiseaseModel":
         if cls._instance is None:
@@ -38,6 +48,22 @@ class CropDiseaseModel:
                 return candidate
         return candidates[0]
 
+    def _resolve_weight_path(self, model_dir: Path | None = None) -> Path | None:
+        """Resolve a supported local weight file for the model directory."""
+        base_dir = model_dir or self.model_dir
+        for candidate_name in ("model.safetensors", "pytorch_model.bin"):
+            candidate_path = base_dir / candidate_name
+            if candidate_path.exists():
+                return candidate_path
+        return None
+
+    def _normalize_prediction_label(self, label: str) -> str:
+        """Map the new model's label names to the disease metadata keys used by the service."""
+        normalized_label = str(label).strip()
+        if not normalized_label:
+            return "Unknown"
+        return self._LABEL_NORMALIZATION_MAP.get(normalized_label, normalized_label)
+
     def load_model(self) -> None:
         """Load the processor and model from the local model directory."""
         if self._loaded:
@@ -46,11 +72,15 @@ class CropDiseaseModel:
         if not self.model_dir.exists():
             raise FileNotFoundError(f"Model directory not found: {self.model_dir}")
 
-        required_files = ["config.json", "model.safetensors", "preprocessor_config.json"]
+        required_files = ["config.json", "preprocessor_config.json"]
         missing_files = [name for name in required_files if not (self.model_dir / name).exists()]
         if missing_files:
             missing = ", ".join(missing_files)
             raise FileNotFoundError(f"Missing model files: {missing}")
+
+        weight_path = self._resolve_weight_path(self.model_dir)
+        if weight_path is None:
+            raise FileNotFoundError("Missing model weights: expected model.safetensors or pytorch_model.bin")
 
         try:
             from transformers import AutoImageProcessor, AutoModelForImageClassification
@@ -106,6 +136,7 @@ class CropDiseaseModel:
             probabilities = torch.nn.functional.softmax(outputs.logits, dim=-1)[0]
             confidence_value, predicted_index = probabilities.max(dim=0)
             predicted_label = self.model.config.id2label.get(int(predicted_index.item()), str(predicted_index.item()))
+            predicted_label = self._normalize_prediction_label(predicted_label)
             confidence = round(float(confidence_value.item()) * 100, 2)
         except Exception as exc:  # pragma: no cover - runtime dependency path
             raise RuntimeError("Inference failed.") from exc
