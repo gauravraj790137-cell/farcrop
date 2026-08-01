@@ -1,7 +1,7 @@
 import json
 from typing import Any
 
-from app.config import (
+from ..config import (
     GROQ_API_KEY,
     GROQ_MODEL,
     LLM_TIMEOUT_SECONDS,

@@ -1,10 +1,10 @@
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
 
-from app.config import MAX_IMAGE_SIZE, UPLOAD_DIR
-from app.models.schemas import ErrorResponse, HealthResponse, PredictionResponse, RootResponse
-from app.services.disease_service import enrich_prediction
-from app.services.inference import predict
-from app.utils.image import delete_temp, save_upload, validate_image
+from ..config import MAX_IMAGE_SIZE, UPLOAD_DIR
+from ..models.schemas import ErrorResponse, HealthResponse, PredictionResponse, RootResponse
+from ..services.disease_service import enrich_prediction
+from ..services.inference import predict
+from ..utils.image import delete_temp, save_upload, validate_image
 
 router = APIRouter()
 

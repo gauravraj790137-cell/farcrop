@@ -4,8 +4,8 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.api.routes import router
-from app.services.inference import crop_disease_model
+from .api.routes import router
+from .services.inference import crop_disease_model
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("farcrop")
