@@ -1,0 +1,5 @@
+com.example.farcrop
+string app_name
+style Theme_FarCrop
+xml file_paths
+xml network_security_config

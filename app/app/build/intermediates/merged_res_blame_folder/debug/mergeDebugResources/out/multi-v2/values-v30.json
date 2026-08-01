@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.example.farcrop.app-mergeDebugResources-68:/values-v30/values-v30.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\Utkar\\.gradle\\caches\\9.6.1\\transforms\\74d424e6010ad4611d3e7d80f585bd26\\transformed\\material3-release\\res\\values-v30\\values-v30.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "72",
+                        "endOffsets": "123"
+                    }
+                }
+            ]
+        }
+    ]
+}

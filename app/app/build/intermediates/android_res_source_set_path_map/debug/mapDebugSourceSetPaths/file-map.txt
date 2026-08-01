@@ -1,0 +1,8 @@
+com.example.farcrop.app-pngs-0 C:\Users\Utkar\OneDrive\Desktop\farcrop\app\app\build\generated\res\pngs\debug
+com.example.farcrop.app-updated_navigation_xml-1 C:\Users\Utkar\OneDrive\Desktop\farcrop\app\app\build\generated\updated_navigation_xml\debug
+com.example.farcrop.app-packageDebugResources-2 C:\Users\Utkar\OneDrive\Desktop\farcrop\app\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
+com.example.farcrop.app-packageDebugResources-3 C:\Users\Utkar\OneDrive\Desktop\farcrop\app\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
+com.example.farcrop.app-debug-4 C:\Users\Utkar\OneDrive\Desktop\farcrop\app\app\build\intermediates\merged_res\debug\mergeDebugResources
+com.example.farcrop.app-debug-5 C:\Users\Utkar\OneDrive\Desktop\farcrop\app\app\src\debug\res
+com.example.farcrop.app-main-6 C:\Users\Utkar\OneDrive\Desktop\farcrop\app\app\src\main\res
+gradleHome-0 C:\Users\Utkar\.gradle

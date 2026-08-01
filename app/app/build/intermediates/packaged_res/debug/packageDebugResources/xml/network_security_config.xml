@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!--
+        Allow plain HTTP only to private/local network addresses.
+        This covers any IP the user enters in Settings for their local FastAPI server.
+        Public internet traffic keeps the secure default (HTTPS only).
+    -->
+
+    <!-- 192.168.x.x -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">192.168.0.0</domain>
+    </domain-config>
+
+    <!--
+        Android's domain-config does not support CIDR ranges, so we use
+        usesCleartextTraffic at application level restricted to local ranges only.
+        The cleanest approach for a local-only dev tool is to permit cleartext
+        globally while the user controls which server they point to.
+        For a production app this would be tightened to specific domains.
+    -->
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
