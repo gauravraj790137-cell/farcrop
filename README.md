@@ -1,6 +1,8 @@
 # FarCrop V2 — Technical Design Document & Architecture Specification
 **AI Crop Health & Lifecycle Management Platform**
 
+#DEMO
+https://drive.google.com/file/d/1Z5BnNXGbs16LyNxh7Ljz4Rg10m-7HYPU/view?usp=sharing
 ---
 
 ## 1. Executive Summary
