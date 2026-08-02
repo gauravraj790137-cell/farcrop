@@ -11,11 +11,14 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.farcrop.model.PredictionResponse
-import com.example.farcrop.ui.screens.HomeScreen
+import com.example.farcrop.model.V2StandardResponse
+import com.example.farcrop.ui.screens.CaptureInspectionScreen
+import com.example.farcrop.ui.screens.CreateCropCycleScreen
+import com.example.farcrop.ui.screens.CropCycleDetailsScreen
+import com.example.farcrop.ui.screens.MainScreenContainer
 import com.example.farcrop.ui.screens.ResultScreen
-import com.example.farcrop.ui.screens.SettingsScreen
 import com.example.farcrop.ui.theme.FarCropTheme
+import com.example.farcrop.ui.viewmodel.CropCycleViewModel
 import com.google.gson.Gson
 
 class MainActivity : ComponentActivity() {
@@ -29,39 +32,74 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val navController = rememberNavController()
                     val gson = remember { Gson() }
+                    val viewModel = remember { CropCycleViewModel(applicationContext) }
 
                     NavHost(
                         navController = navController,
-                        startDestination = "home"
+                        startDestination = "main"
                     ) {
-                        composable("home") {
-                            HomeScreen(
-                                onNavigateToSettings = {
-                                    navController.navigate("settings")
+                        composable("main") {
+                            MainScreenContainer(
+                                viewModel = viewModel,
+                                onNavigateToCreateCycle = {
+                                    navController.navigate("create_crop_cycle")
                                 },
-                                onNavigateToResult = { response ->
-                                    // Encode the response as JSON and pass via nav argument
-                                    val json = gson.toJson(response)
-                                    val encoded = java.net.URLEncoder.encode(json, "UTF-8")
-                                    navController.navigate("result/$encoded")
+                                onNavigateToCycleDetails = { cycleId ->
+                                    navController.navigate("crop_cycle_details/$cycleId")
                                 }
                             )
                         }
 
-                        composable("settings") {
-                            SettingsScreen(
+                        composable("create_crop_cycle") {
+                            CreateCropCycleScreen(
+                                viewModel = viewModel,
                                 onBack = { navController.popBackStack() }
                             )
                         }
 
-                        composable("result/{responseJson}") { backStackEntry ->
+                        composable("crop_cycle_details/{cycleId}") { backStackEntry ->
+                            val cycleId = backStackEntry.arguments?.getString("cycleId") ?: ""
+                            CropCycleDetailsScreen(
+                                viewModel = viewModel,
+                                cycleId = cycleId,
+                                onNavigateToCapture = {
+                                    navController.navigate("capture_inspection/$cycleId")
+                                },
+                                onNavigateToResult = { response, cId ->
+                                    val json = gson.toJson(response)
+                                    val encoded = java.net.URLEncoder.encode(json, "UTF-8")
+                                    navController.navigate("result/$encoded/$cId")
+                                },
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+
+                        composable("capture_inspection/{cycleId}") { backStackEntry ->
+                            val cycleId = backStackEntry.arguments?.getString("cycleId") ?: ""
+                            CaptureInspectionScreen(
+                                viewModel = viewModel,
+                                cycleId = cycleId,
+                                onNavigateToResult = { response, cId ->
+                                    val json = gson.toJson(response)
+                                    val encoded = java.net.URLEncoder.encode(json, "UTF-8")
+                                    navController.navigate("result/$encoded/$cId") {
+                                        popUpTo("crop_cycle_details/$cId") { inclusive = false }
+                                    }
+                                },
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+
+                        composable("result/{responseJson}/{cycleId}") { backStackEntry ->
                             val encoded = backStackEntry.arguments?.getString("responseJson") ?: ""
+                            val cycleId = backStackEntry.arguments?.getString("cycleId") ?: ""
                             val json = java.net.URLDecoder.decode(encoded, "UTF-8")
-                            val response = gson.fromJson(json, PredictionResponse::class.java)
+                            val response = gson.fromJson(json, V2StandardResponse::class.java)
                             ResultScreen(
                                 response = response,
+                                cycleId = cycleId,
                                 onBack = {
-                                    navController.popBackStack("home", inclusive = false)
+                                    navController.popBackStack("crop_cycle_details/$cycleId", inclusive = false)
                                 }
                             )
                         }
@@ -71,3 +109,4 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+

@@ -1,1 +1,29 @@
 .env
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Android Build & IDE files
+.gradle/
+.kotlin/
+app/build/
+app/app/build/
+app/.gradle/
+app/.kotlin/
+.idea/
+*.apk
+*.aar
+*.keystore
+local.properties
+
+# Log files
+*.log
+build_out.txt
+build_output.txt
+
+# OS files
+.DS_Store
+Thumbs.db

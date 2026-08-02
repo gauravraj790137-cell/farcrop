@@ -112,7 +112,7 @@ class DiseaseService:
         return json.dumps(details, ensure_ascii=False)
 
     def get_serpapi_links(self, product_names: list[str]) -> list[dict[str, str]]:
-        """Search for best-buy links for suggested products using SerpAPI when configured."""
+        """Search for shopping links for suggested products using SerpAPI when configured."""
         if not SERPAPI_API_KEY:
             return []
 
@@ -127,6 +127,7 @@ class DiseaseService:
             for product_name in product_names[:3]:
                 results = client.search(
                     {
+                        "engine": "google_shopping",
                         "q": product_name,
                         "location": SERPAPI_LOCATION,
                         "hl": SERPAPI_LANGUAGE,
@@ -134,11 +135,17 @@ class DiseaseService:
                         "google_domain": "google.com",
                     }
                 )
-                for item in results.get("organic_results", [])[:2]:
-                    link = item.get("link") or ""
+                for item in (results.get("shopping_results") or results.get("organic_results") or [])[:3]:
+                    link = item.get("link") or item.get("url") or ""
                     title = item.get("title") or product_name
-                    if link:
-                        links.append({"title": str(title), "url": str(link)})
+                    if not link:
+                        continue
+
+                    payload: dict[str, str] = {"title": str(title), "url": str(link)}
+                    thumbnail = item.get("thumbnail") or item.get("image") or item.get("thumbnail_url") or ""
+                    if thumbnail:
+                        payload["thumbnail"] = str(thumbnail)
+                    links.append(payload)
         except Exception:
             return []
 

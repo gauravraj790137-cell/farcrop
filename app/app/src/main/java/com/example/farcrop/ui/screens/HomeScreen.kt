@@ -1,281 +1,277 @@
 package com.example.farcrop.ui.screens
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Collections
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Agriculture
+import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.farcrop.model.PredictionResponse
-import com.example.farcrop.ui.viewmodel.HomeViewModel
-import com.example.farcrop.ui.viewmodel.UploadState
-import kotlinx.coroutines.launch
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.example.farcrop.model.CropCycle
+import com.example.farcrop.ui.viewmodel.CropCycleViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onNavigateToSettings: () -> Unit,
-    onNavigateToResult: (PredictionResponse) -> Unit,
-    viewModel: HomeViewModel = viewModel()
+    viewModel: CropCycleViewModel,
+    onNavigateToCreateCycle: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    val uploadState by viewModel.uploadState.collectAsStateWithLifecycle()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val scope = rememberCoroutineScope()
-    var showSheet by remember { mutableStateOf(false) }
+    val cropCycles by viewModel.cropCycles.collectAsState()
 
-    // Navigate to result when upload succeeds
-    LaunchedEffect(uploadState) {
-        if (uploadState is UploadState.Success) {
-            onNavigateToResult((uploadState as UploadState.Success).response)
-            viewModel.resetState()
+    val activeCount = getActiveCyclesCount(cropCycles)
+    val todayInspections = getTodayInspectionsCount(cropCycles)
+    val recentDiseases = getRecentDiseases(cropCycles)
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        // Welcome and Titles
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = "Namaste,",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "FarCrop",
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                letterSpacing = 1.sp
+            )
+            Text(
+                text = "AI Crop Health Assistant",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.secondary
+            )
         }
-    }
 
-    // --- Camera launcher ---
-    val cameraLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.TakePicture()
-    ) { success ->
-        if (success) viewModel.uploadFromCamera(context)
-    }
-
-    // --- Gallery launcher ---
-    val galleryLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let { viewModel.uploadFromUri(context, it) }
-    }
-
-    // --- Camera permission launcher ---
-    val cameraPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            val uri = viewModel.createCameraUri(context)
-            cameraLauncher.launch(uri)
-        }
-    }
-
-    fun launchCamera() {
-        scope.launch { sheetState.hide() }.invokeOnCompletion { showSheet = false }
-        val hasPerm = ContextCompat.checkSelfPermission(
-            context, Manifest.permission.CAMERA
-        ) == PackageManager.PERMISSION_GRANTED
-        if (hasPerm) {
-            val uri = viewModel.createCameraUri(context)
-            cameraLauncher.launch(uri)
-        } else {
-            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-        }
-    }
-
-    fun launchGallery() {
-        scope.launch { sheetState.hide() }.invokeOnCompletion { showSheet = false }
-        galleryLauncher.launch("image/*")
-    }
-
-    // Bottom sheet
-    if (showSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showSheet = false },
-            sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.surface,
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        // Stats Panel
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-                    .padding(bottom = 40.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    text = "Add Photo",
+                    text = "Quick Statistics",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp),
-                    textAlign = TextAlign.Center
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-                // Take Photo
-                OutlinedButton(
-                    onClick = { launchCamera() },
+
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.CameraAlt,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
+                    StatCard(
+                        value = activeCount.toString(),
+                        label = "Active Cycles",
+                        icon = Icons.Filled.Agriculture,
+                        iconColor = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.weight(1f)
                     )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(text = "Take Photo", fontSize = 16.sp)
-                }
-                // Upload from Gallery
-                OutlinedButton(
-                    onClick = { launchGallery() },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Collections,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(text = "Upload from Gallery", fontSize = 16.sp)
-                }
-            }
-        }
-    }
-
-    // Main scaffold
-    Scaffold(
-        containerColor = Color.Transparent
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xFF1B5E20),
-                            Color(0xFF2E7D32),
-                            Color(0xFF388E3C),
-                            Color(0xFF81C784)
-                        )
-                    )
-                )
-                .padding(innerPadding)
-        ) {
-            // Settings icon — top right
-            IconButton(
-                onClick = onNavigateToSettings,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(16.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Settings,
-                    contentDescription = "Settings",
-                    tint = Color.White,
-                    modifier = Modifier.size(28.dp)
-                )
-            }
-
-            // Center content
-            Column(
-                modifier = Modifier.align(Alignment.Center),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(20.dp)
-            ) {
-                Text(
-                    text = "FarCrop",
-                    color = Color.White,
-                    fontSize = 40.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 2.sp
-                )
-                Text(
-                    text = "Detect crop diseases instantly",
-                    color = Color.White.copy(alpha = 0.8f),
-                    fontSize = 15.sp,
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Camera FAB — big, with label
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .size(96.dp)
-                            .clip(CircleShape)
-                            .background(Color.White)
-                    ) {
-                        if (uploadState is UploadState.Loading) {
-                            CircularProgressIndicator(
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(40.dp)
-                            )
-                        } else {
-                            IconButton(
-                                onClick = { showSheet = true },
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.CameraAlt,
-                                    contentDescription = "Take or upload photo",
-                                    tint = Color(0xFF2E7D32),
-                                    modifier = Modifier.size(48.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    Text(
-                        text = if (uploadState is UploadState.Loading) "Analysing…" else "Click",
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold
+                    StatCard(
+                        value = todayInspections.toString(),
+                        label = "Inspections Today",
+                        icon = Icons.Filled.Search,
+                        iconColor = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.weight(1f)
                     )
                 }
-            }
 
-            // Error snackbar at bottom
-            if (uploadState is UploadState.Error) {
+                // Recent diseases card
                 Card(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-                    shape = RoundedCornerShape(12.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = (uploadState as UploadState.Error).message,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.weight(1f),
-                            fontSize = 13.sp
-                        )
-                        TextButton(onClick = { viewModel.resetState() }) {
-                            Text("Dismiss", color = MaterialTheme.colorScheme.error)
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.surface),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.BugReport,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "Recent Diseases",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            val diseasesText = if (recentDiseases.isEmpty()) {
+                                "None detected recently"
+                            } else {
+                                recentDiseases.joinToString(", ")
+                            }
+                            Text(
+                                text = diseasesText,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
                         }
                     }
                 }
             }
         }
+
+        // New Crop Cycle Button (Large, high-contrast, easy to tap for farmers)
+        Button(
+            onClick = onNavigateToCreateCycle,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(68.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ),
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Add,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = "New Crop Cycle",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
+}
+
+@Composable
+fun StatCard(
+    value: String,
+    label: String,
+    icon: ImageVector,
+    iconColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = value,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconColor,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+private fun getActiveCyclesCount(list: List<CropCycle>): Int {
+    val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    val today = Date()
+    return list.count {
+        try {
+            val plantation = sdf.parse(it.plantationDate)
+            val harvest = sdf.parse(it.estimatedHarvestDate)
+            plantation != null && harvest != null && !today.before(plantation) && !today.after(harvest)
+        } catch (e: Exception) {
+            true
+        }
+    }
+}
+
+private fun getTodayInspectionsCount(list: List<CropCycle>): Int {
+    val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    val todayStr = sdf.format(Date())
+    return list.flatMap { it.inspections }.count { it.date.startsWith(todayStr) }
+}
+
+private fun getRecentDiseases(list: List<CropCycle>): List<String> {
+    return list.flatMap { it.inspections }
+        .sortedByDescending { it.date }
+        .map { it.disease.replace("___", " — ").replace("_", " ") }
+        .distinct()
+        .take(3)
 }
